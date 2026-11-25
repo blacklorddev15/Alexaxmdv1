@@ -1,9 +1,17 @@
 name: Deploy ALEXA XMD to Heroku
 
+# Plain git push instead of a third-party action: the runners no longer ship the Heroku CLI, and
+# akhileshns/heroku-deploy@v3 calls `heroku create` (which fails with "heroku: not found") even
+# when the app already exists. This needs only git and the API key.
+
 on:
   push:
     branches: [main]
   workflow_dispatch:
+
+concurrency:
+  group: heroku-deploy
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -11,10 +19,20 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Deploy to Heroku
-        uses: akhileshns/heroku-deploy@v3.14.15
-        with:
-          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-          heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
-          heroku_email: ${{ secrets.HEROKU_EMAIL }}
-          usedocker: false
+
+      - name: Push to Heroku
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+          HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
+        run: |
+          if [ -z "$HEROKU_APP_NAME" ]; then
+            echo "::error::HEROKU_APP_NAME secret is not set"; exit 1
+          fi
+          git config --global user.email "${HEROKU_EMAIL:-deploy@users.noreply.github.com}"
+          git config --global user.name "GitHub Actions"
+          git remote add heroku "https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git"
+          git push heroku "HEAD:refs/heads/main" --force
+        # The key would otherwise appear in the remote URL inside error output.
+      - name: Scrub credentials
+        if: always()
+        run: git remote remove heroku || true
