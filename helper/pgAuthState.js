@@ -94,4 +94,11 @@ async function usePostgresAuthState(pool, sessionId) {
   return { state, saveCreds: () => writeRow('creds', creds) };
 }
 
-module.exports = { ensureSessionTable, usePostgresAuthState, deletePostgresSession, TABLE };
+// Session ids that have credentials in the database. The disk-based listSessions() cannot see
+// these, which is why the bot must merge both lists when deciding what to reconnect.
+async function listPostgresSessions(pool) {
+  const { rows } = await pool.query(`SELECT DISTINCT session_id FROM ${TABLE} WHERE key = 'creds'`);
+  return rows.map((r) => r.session_id);
+}
+
+module.exports = { ensureSessionTable, usePostgresAuthState, deletePostgresSession, listPostgresSessions, TABLE };

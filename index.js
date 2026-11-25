@@ -37,8 +37,27 @@ const {
   getWaSettings, setWaSetting, getAllPairs, getUserPairs,
   addPair, removePair, registerUser, numOf,
 } = require('./helper/function');
-const { ensureSessionTable, usePostgresAuthState, deletePostgresSession } = require('./helper/pgAuthState');
+const { ensureSessionTable, usePostgresAuthState, deletePostgresSession, listPostgresSessions } = require('./helper/pgAuthState');
 const { stylize } = require('./helper/style');
+
+// Sessions now live in Postgres, so "which sessions exist?" is the union of the disk directory and
+// the database. listSessions() alone only sees creds that were never migrated, which made the bot
+// start with zero sessions after every restart and stop answering.
+let pgSessionIds = new Set();
+async function refreshPgSessions() {
+  if (!pgPool) return;
+  try {
+    pgSessionIds = new Set(await listPostgresSessions(pgPool));
+  } catch (err) {
+    logError('PG', 'list sessions: ' + err.message);
+  }
+}
+function allSessions() {
+  return Array.from(new Set([...listSessions(), ...pgSessionIds]));
+}
+function sessionAvailable(sid) {
+  return sessionExists(sid) || pgSessionIds.has(sid);
+}
 const { ensureDir, formatUptime } = require('./helper/utils');
 const { logInfo, logSuccess, logWarn, logError, logSession } = require('./helper/logger');
 const S = require('./helper/session');
@@ -63,6 +82,7 @@ if (process.env.DATABASE_URL) {
     });
     pgPool.on('error', (err) => logError('PG', err.message));
     ensureSessionTable(pgPool)
+      .then(() => refreshPgSessions())
       .then(() => logSuccess('PG', 'auth state table ready - sessions persist across restarts'))
       .catch((err) => logError('PG', 'auth state table: ' + err.message));
   } catch (err) {
@@ -895,7 +915,7 @@ function setupBot(botInstance) {
 
     const sessionId = `wa_${userId}_${phone}`;
     if (activeSockets.has(sessionId)) return ctx.reply(`✅ +${phone} already connected!`);
-    if (sessionExists(sessionId)) {
+    if (sessionAvailable(sessionId)) {
       await ctx.reply(`♻️ Reconnecting +${phone}...`);
       await startWhatsApp(sessionId, ctx.chat.id, null, userId);
       return;
@@ -1317,7 +1337,7 @@ function setupBot(botInstance) {
         await ctx.reply(`🔄 Pairing +${phone}...`);
         const sid = `wa_${userId}_${phone}`;
         if (activeSockets.has(sid)) return ctx.reply(`✅ +${phone} already connected!`);
-        if (sessionExists(sid)) {
+        if (sessionAvailable(sid)) {
           await ctx.reply(`♻️ Reconnecting +${phone}...`);
           await startWhatsApp(sid, ctx.chat.id, null, userId);
         } else {
@@ -1334,7 +1354,7 @@ function setupBot(botInstance) {
         if (getUserPairs(userId).find(p => p.sessionId === sid)) {
           return ctx.reply(`ℹ️ Session \`${sid}\` already paired with your account.`, { parse_mode: 'Markdown' });
         }
-        if (!sessionExists(sid)) return ctx.reply('❌ Session not found locally.');
+        if (!sessionAvailable(sid)) return ctx.reply('❌ Session not found locally.');
         if (activeSockets.has(sid)) return ctx.reply(`✅ Session already active.`, { parse_mode: 'Markdown' });
         await ctx.reply(`🔄 Restoring session \`${sid}\`...`, { parse_mode: 'Markdown' });
         const waNum = sid.split('_').pop();
@@ -1513,9 +1533,10 @@ function setupBot(botInstance) {
 //   SESSION WATCHER
 // ─────────────────────────────────────────────────────────────
 function startSessionWatcher() {
-  setInterval(async () => {
+  const restore = async () => {
     try {
-      const sessions = listSessions();
+      await refreshPgSessions();
+      const sessions = allSessions();
       for (const sid of sessions) {
         if (activeSockets.has(sid)) continue;
         logInfo('WATCHER', `Starting session: ${sid}`);
@@ -1528,7 +1549,9 @@ function startSessionWatcher() {
         startWhatsApp(sid, null, null, tgUserId).catch(e => logError('WATCHER', e.message));
       }
     } catch {}
-  }, 30000);
+  };
+  setInterval(restore, 30000);
+  restore().catch(() => {});
   logSuccess('WATCHER', 'Session watcher started (30s)');
 }
 
@@ -1622,13 +1645,13 @@ async function launch() {
     mode: premData.premOnly ? 'premium-only' : 'public',
     owner: String(settings.OWNER_TELEGRAM_ID),
     commands: ELITE_PACK_COMMANDS,
-    sessions: listSessions().length,
+    sessions: allSessions().length,
     telegramLabel: mainBot ? 'running' : 'not configured',
     telegramStatus: mainBot ? 'active' : 'not_configured',
     panelLabel: PANEL_DOMAIN ? 'connected' : 'not set',
     panelStatus: PANEL_DOMAIN ? 'connected' : 'not_set',
-    waLabel: listSessions().length ? 'restoring sessions' : 'waiting for pairing',
-    waStatus: listSessions().length ? 'connecting' : 'connecting',
+    waLabel: allSessions().length ? 'restoring sessions' : 'waiting for pairing',
+    waStatus: allSessions().length ? 'connecting' : 'connecting',
     toggles: { antiDelete: true, autoStatusView: false, autoReact: false, antilink: false, anticall: false, chatbot: false, antibot: false },
   });
   logInfo('PREMIUM', `Mode: ${premData.premOnly ? 'Premium-only' : 'Public'} | Owners: ${[settings.OWNER_TELEGRAM_ID, ...premData.owners].length} | Premium: ${premData.premUsers.length}`);
@@ -1642,7 +1665,7 @@ async function launch() {
   startPingLoop();
   startSessionWatcher();
 
-  const list = listSessions();
+  const list = allSessions();
   logInfo('STARTUP', `Reloading ${list.length} session(s)`);
   const allPairs = getAllPairs();
   list.forEach((sid, i) => {
