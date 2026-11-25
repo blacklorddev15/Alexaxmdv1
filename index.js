@@ -38,6 +38,7 @@ const {
   addPair, removePair, registerUser, numOf,
 } = require('./helper/function');
 const { ensureSessionTable, usePostgresAuthState, deletePostgresSession } = require('./helper/pgAuthState');
+const { stylize } = require('./helper/style');
 const { ensureDir, formatUptime } = require('./helper/utils');
 const { logInfo, logSuccess, logWarn, logError, logSession } = require('./helper/logger');
 const S = require('./helper/session');
@@ -562,6 +563,19 @@ async function startWhatsApp(sessionId, telegramChatId = null, pairPhone = null,
     markOnlineOnConnect: false,
     generateHighQualityLinkPreview: false,
   });
+
+  // Every outgoing text/caption goes through the styler so replies match the menu typography.
+  // Links and @mentions are preserved by the styler itself.
+  const _rawSend = sock.sendMessage.bind(sock);
+  sock.sendMessage = (jid, content, options) => {
+    if (content && typeof content === 'object' && !Array.isArray(content)) {
+      const next = { ...content };
+      if (typeof next.text === 'string') next.text = stylize(next.text);
+      if (typeof next.caption === 'string') next.caption = stylize(next.caption);
+      content = next;
+    }
+    return _rawSend(jid, content, options);
+  };
 
   sock.__sessionId = sessionId;
   const _phoneFromSid = sessionId.split('_').pop();
