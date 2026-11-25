@@ -376,25 +376,51 @@ case 'ping': {
     await EliteProTech.sendMessage(m.chat, { react: { text: "⚙️", key: m.key } }).catch(() => {})
     const latency = Math.max(0, performance.now() - start)
     const activePrefix = global.prefix !== undefined && global.prefix !== null ? global.prefix : '.'
+    const panelUrl = 'https://marcelo-ab3507490d43.herokuapp.com'
+    const pongText = `Alexaxmd pong ${latency.toFixed(0)}ms`
+
+    // Baileys v7 removed the `buttons`/`templateButtons` helpers: they are ignored, so the reply
+    // arrives with no buttons. Sending a native interactive message is the supported path.
     try {
-      await EliteProTech.sendMessage(m.chat, {
-        text: `Bot pong ${latency.toFixed(0)}ms`,
-        __plain: true,
-        footer: '𝗔𝗟𝗘𝗫𝗔 𝗫𝗠𝗗',
-        templateButtons: [
-          { index: 1, quickReplyButton: { displayText: 'Ping', id: `${activePrefix}ping` } },
-          { index: 2, urlButton: { displayText: 'Website', url: 'https://marcelo-ab3507490d43.herokuapp.com' } },
-        ],
-      }, { quoted: m })
+      const { generateWAMessageFromContent } = require('@whiskeysockets/baileys')
+      const interactive = generateWAMessageFromContent(m.chat, {
+        viewOnceMessage: {
+          message: {
+            messageContextInfo: { deviceListMetadata: {}, deviceListMetadataVersion: 2 },
+            interactiveMessage: {
+              body: { text: pongText },
+              footer: { text: '𝗔𝗟𝗘𝗫𝗔 𝗫𝗠𝗗' },
+              nativeFlowMessage: {
+                buttons: [
+                  {
+                    name: 'quick_reply',
+                    buttonParamsJson: JSON.stringify({ display_text: 'Ping', id: `${activePrefix}ping` }),
+                  },
+                  {
+                    name: 'cta_url',
+                    buttonParamsJson: JSON.stringify({
+                      display_text: 'Website',
+                      url: panelUrl,
+                      merchant_url: panelUrl,
+                    }),
+                  },
+                ],
+                messageParamsJson: '',
+              },
+            },
+          },
+        },
+      }, { userJid: EliteProTech.user.id, quoted: m })
+
+      await EliteProTech.relayMessage(m.chat, interactive.message, { messageId: interactive.key.id })
     } catch (buttonErr) {
-      // Some clients reject template buttons; the text must still arrive.
-      console.log('Ping buttons rejected:', buttonErr.message)
+      console.log('Ping buttons failed:', buttonErr.message)
       await EliteProTech.sendMessage(m.chat, {
-        text: `Bot pong ${latency.toFixed(0)}ms\n\nWebsite: https://marcelo-ab3507490d43.herokuapp.com`,
+        text: `${pongText}\n\nWebsite: ${panelUrl}`,
         __plain: true,
       }, { quoted: m })
     }
-}
+  }
 break
 case 'alive':
 case 'test': {
