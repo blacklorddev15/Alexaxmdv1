@@ -1,54 +1,504 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>ALEXA XMD · WhatsApp Pairing</title>
-  <style>
-    :root{color-scheme:dark;--bg:#102018;--card:#172b20;--text:#e8f5ec;--muted:#9fc0aa;--green:#25d366;--line:#294838}
-    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at top,#1b3b2a,#0c1711 58%);font:16px system-ui,sans-serif;color:var(--text);display:grid;place-items:center;padding:18px}
-    main{width:min(100%,460px)}.brand{text-align:center;margin-bottom:18px}.brand h1{margin:0;font-size:2rem}.brand p{margin:7px 0;color:var(--muted)}
-    .card{background:rgba(23,43,32,.96);border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:0 18px 50px #0007}.label{display:block;color:var(--muted);font-size:.82rem;margin:0 0 8px;text-transform:uppercase;letter-spacing:.08em}
-    input{width:100%;border:1px solid var(--line);border-radius:13px;background:#0d1b13;color:var(--text);padding:14px;font-size:1rem;outline:none}input:focus{border-color:var(--green)}button{width:100%;border:0;border-radius:13px;padding:14px;margin-top:14px;background:var(--green);color:#06200e;font-weight:800;font-size:1rem;cursor:pointer}button:disabled{opacity:.55;cursor:wait}.status{margin-top:18px;padding:16px;border:1px solid var(--line);border-radius:15px;background:#0d1b13;line-height:1.5}.code{font:800 2rem ui-monospace,monospace;letter-spacing:.18em;color:var(--green);text-align:center;margin:12px 0}.hint,.small{color:var(--muted);font-size:.88rem}.error{color:#ff9f9f}.ok{color:var(--green)}ol{padding-left:20px;margin-bottom:0}footer{text-align:center;color:var(--muted);font-size:.75rem;margin-top:14px}
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Pixel X Ultra · Dark Green Neumorphism</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Dark Green Palette */
+  --bg: #1e2b23; 
+  --shadow-dark: #121a15; 
+  --shadow-light: #2a3b31; 
+  --text: #e2f0e6; 
+  --muted: #8bb59a; 
+  
+  --accent: #25d366; /* WhatsApp Green */
+  --accent-hover: #1eb355;
+  --fh:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{
+  font-family:var(--fh);
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden; 
+  display: flex; 
+  justify-content: center;
+}
+
+.wrap{
+  position:relative;
+  z-index:1;
+  max-width:480px;
+  width: 100%;
+  margin:0 auto;
+  padding:0 16px 20px; 
+  display: flex; 
+  flex-direction: column; 
+  min-height: 100vh;
+}
+
+/* --- NEUMORPHISM UTILITIES --- */
+.neo-raised {
+  background: var(--bg);
+  box-shadow: 9px 9px 18px var(--shadow-dark), 
+             -9px -9px 18px var(--shadow-light);
+  border-radius: 20px;
+}
+
+.neo-inset {
+  background: var(--bg);
+  box-shadow: inset 6px 6px 12px var(--shadow-dark), 
+              inset -6px -6px 12px var(--shadow-light);
+  border-radius: 14px;
+}
+
+/* --- TOP NAV --- */
+.topnav{
+  position:sticky;
+  top:0;
+  z-index:500;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:14px 16px;
+  background:var(--bg);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+  border-bottom: 1px solid var(--shadow-dark);
+}
+.menu-burger{
+  background:var(--bg);
+  border:none;
+  color:var(--text);
+  cursor:pointer;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:0.2s;
+  box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light);
+}
+.menu-burger:active{ box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light); }
+.topnav-title{font-weight:700;font-size:.95rem;letter-spacing:.02em}
+.topnav-badge{
+  margin-left:auto;
+  font-size:.62rem;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--accent);
+  border:1px solid var(--shadow-light);
+  border-radius:99px;
+  padding:4px 9px;
+  box-shadow: inset 2px 2px 4px var(--shadow-dark), inset -2px -2px 4px var(--shadow-light);
+}
+
+/* --- HERO SECTION --- */
+.hero{
+  position:relative;
+  height:180px;
+  margin: 16px 0;
+  display: flex; 
+  align-items: flex-end;
+  padding: 20px;
+  overflow: hidden;
+}
+.hero-text { z-index: 1; }
+.hero-text .name{font-size:1.65rem;font-weight:700;letter-spacing:.02em;line-height:1}
+.hero-text .tag{font-size:.72rem;color:var(--accent);letter-spacing:.14em;text-transform:uppercase;margin-top:6px;font-weight:600}
+
+/* --- MAIN CONTENT --- */
+.wrap-inner{padding-top:10px; flex: 1; display: flex; flex-direction: column;}
+.header{display:flex;align-items:center;justify-content:center;margin: 0 0 20px}
+.stat-pill{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:9px 18px;
+  font-size:.8rem;
+  font-weight:500;
+  color:var(--muted);
+  border-radius:99px;
+}
+.pulse-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 0 rgba(37,211,102,.6);animation:pulse 2s infinite;flex-shrink:0}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(37,211,102,.55)}70%{box-shadow:0 0 0 7px rgba(37,211,102,0)}100%{box-shadow:0 0 0 0 rgba(37,211,102,0)}}
+
+.card{padding:24px;margin-bottom:16px;}
+.card-label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.11em;margin-bottom:12px;display:block;font-weight:600}
+
+.country-trigger{
+  width:100%;
+  padding:14px 15px;
+  font-size:.88rem;
+  font-family:inherit;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  cursor:pointer;
+  color: var(--text);
+  border: none;
+  margin-bottom:16px;
+  transition:0.2s;
+}
+.country-trigger:active { box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light); }
+
+.phone-row{display:flex;gap:12px;margin-bottom:24px}
+.prefix-wrap{flex-shrink:0}
+.prefix-box{
+  padding:14px;
+  color:var(--accent);
+  font-family:ui-monospace,monospace;
+  font-weight:700;
+  font-size:.9rem;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-width:70px;
+}
+
+input[type=text]{
+  flex:1;
+  padding:14px 15px;
+  font-size:.9rem;
+  font-family:inherit;
+  outline:none;
+  border: none;
+  color: var(--text);
+  min-width:0;
+}
+input[type=text]::placeholder{color:#4a6b55;} /* Adjusted placeholder color */
+input[type=text]:focus { box-shadow: inset 6px 6px 12px var(--shadow-dark), inset -6px -6px 12px var(--shadow-light), 0 0 0 1px var(--accent); }
+
+.btn{
+  width:100%;
+  padding:16px;
+  font-weight:700;
+  font-size:.9rem;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  font-family:inherit;
+  color:var(--accent);
+  border: none;
+  transition:0.2s;
+}
+.btn:active{ box-shadow: inset 6px 6px 12px var(--shadow-dark), inset -6px -6px 12px var(--shadow-light); }
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+
+.code-box{text-align:center;padding:20px 0 6px}
+.code{font-size:2.2rem;font-weight:700;letter-spacing:.16em;color:var(--accent);margin-bottom:12px;font-family:ui-monospace,monospace}
+.hint{font-size:.78rem;color:var(--muted);line-height:1.55}
+
+.status-line{display:flex;align-items:center;gap:9px;justify-content:center;font-size:.78rem;color:var(--muted);margin-top:16px;padding-top:14px;border-top:1px solid var(--shadow-light)}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot.amber{background:#ffce54;animation:pulse2 1.6s infinite}
+.dot.ok{background:var(--accent)}
+@keyframes pulse2{0%,100%{opacity:.4}50%{opacity:1}}
+
+/* --- CHAT UI --- */
+#chat-container { display: none; flex-direction: column; flex: 1; width: 100%; overflow: hidden; margin-bottom: 10px; border-radius: 20px;}
+.chat-header { display: flex; align-items: center; gap: 15px; padding: 20px; border-bottom: 1px solid var(--shadow-dark); }
+.bot-avatar { width: 45px; height: 45px; border-radius: 50%; display: grid; place-items: center; font-size: 20px; color: var(--accent); }
+.chat-header-info h3 { font-size: 1rem; font-weight: 600; }
+.chat-header-info p { font-size: 0.75rem; color: var(--accent); }
+.chat-history { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; min-height: 250px; max-height: 400px;}
+.msg-row { display: flex; width: 100%; }
+.msg-row.bot { justify-content: flex-start; }
+.msg-row.user { justify-content: flex-end; }
+.msg-bubble { padding: 12px 16px; font-size: 0.85rem; line-height: 1.4; max-width: 80%; }
+.msg-row.bot .msg-bubble { border-radius: 16px 16px 16px 4px; }
+.msg-row.user .msg-bubble { border-radius: 16px 16px 4px 16px; color: var(--accent); }
+.chat-input-area { padding: 15px 20px; border-top: 1px solid var(--shadow-dark); display: flex; gap: 12px; align-items: center;}
+.chat-input { flex: 1; padding: 12px 18px; font-family: inherit; font-size: 0.85rem; border: none; color: var(--text);}
+.chat-input::placeholder{color:#4a6b55;}
+.chat-input:focus { outline: none; }
+.btn-send { width: 45px; height: 45px; border-radius: 50%; border: none; display: grid; place-items: center; cursor: pointer; font-size: 18px; flex-shrink: 0; color: var(--accent); transition: 0.2s;}
+.btn-send:active { box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light); }
+
+/* --- MODALS --- */
+.modal-overlay{display:none;position:fixed;inset:0;z-index:9000;background:rgba(10, 20, 15, 0.8);backdrop-filter:blur(5px);align-items:flex-end;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal-panel{width:100%;max-width:480px;max-height:80vh;overflow-y:auto;padding:24px; border-radius:24px 24px 0 0;}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.modal-title{font-size:1.05rem;font-weight:700}
+.modal-close{background:transparent;border:none;color:var(--muted);font-size: 18px; cursor:pointer; width: 35px; height: 35px; border-radius: 50%; display: grid; place-items: center;}
+.modal-close:active { box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light); }
+
+.country-option{display:flex;align-items:center;gap:12px;padding:15px;cursor:pointer;font-size:.85rem;margin-bottom: 8px; border-radius: 14px; transition: 0.2s;}
+.country-option:active{ box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light); }
+.country-option .flag{font-size:1.1rem;flex-shrink:0}
+.country-option .cname{flex:1; color: var(--text);}
+.country-option .ccode{font-family:ui-monospace,monospace;font-size:.75rem;color:var(--accent);font-weight: 600; flex-shrink:0}
+
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);padding:14px 24px;font-size:.85rem;z-index:9999;display:none;max-width:90%;text-align:center; color: var(--text); border-radius: 14px;}
+</style>
 </head>
 <body>
-<main>
-  <header class="brand"><h1>𝘼𝙇𝙀𝙓𝘼 𝙓𝙈𝘿</h1><p>Secure WhatsApp pairing portal</p></header>
-  <section class="card">
-    <label class="label" for="phone">WhatsApp number with country code</label>
-    <input id="phone" inputmode="numeric" autocomplete="tel" placeholder="254712345678" maxlength="15">
-    <button id="pair">Generate pairing code</button>
-    <div id="status" class="status" hidden></div>
-  </section>
-  <footer>Never share your pairing code. This page does not ask for your WhatsApp password.</footer>
-</main>
+
+<div class="wrap">
+  
+  <!-- NAVBAR -->
+  <nav class="topnav">
+    <button type="button" class="menu-burger" id="burger">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <span class="topnav-title">Pixel X Ultra</span>
+    <span class="topnav-badge" id="nav-badge">Session</span>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero neo-raised">
+    <div class="hero-text">
+      <div class="name">PIXEL X ULTRA</div>
+      <div class="tag">WhatsApp Bot Pairing</div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="wrap-inner">
+    
+    <div class="header" id="status-header">
+      <div class="stat-pill neo-inset"><span class="pulse-dot"></span><span>Active pairing system</span></div>
+    </div>
+
+    <!-- SETUP CARD -->
+    <div class="card neo-raised" id="pair-setup">
+      <span class="card-label">Pair your WhatsApp number</span>
+      
+      <span class="card-label">Country</span>
+      <button type="button" class="country-trigger neo-inset" id="country-trigger">
+        <span id="country-display">🇰🇪 Kenya (+254)</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+
+      <span class="card-label">WhatsApp number</span>
+      <div class="phone-row">
+        <div class="prefix-wrap">
+          <div class="prefix-box neo-inset" id="prefix-display">+254</div>
+        </div>
+        <input type="text" class="neo-inset" id="num-input" placeholder="712 345 678" inputmode="numeric" maxlength="15"/>
+      </div>
+
+      <button class="btn neo-raised" id="pair-btn">Connect WhatsApp</button>
+      <button class="btn neo-raised" id="reset-btn" style="display:none; color: var(--muted);">Cancel / Restart</button>
+    </div>
+
+    <!-- PAIRING STATUS CARD -->
+    <div class="card neo-raised" id="pair-status" style="display:none">
+      <span class="card-label" id="status-label">Connecting</span>
+      <div class="code-box" id="status-body">
+        <div class="spin" style="width:26px;height:26px;border-width:3px;margin:0 auto 14px;border-color:var(--shadow-light);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite"></div>
+        <div class="hint">Requesting your pairing code…</div>
+      </div>
+      <div class="status-line" id="status-line" style="display:none">
+        <span class="dot amber" id="status-dot"></span><span id="status-text">Waiting for approval…</span>
+      </div>
+    </div>
+
+    <!-- CHAT INTERFACE -->
+    <div id="chat-container" class="neo-raised">
+      <div class="chat-header">
+        <div class="bot-avatar neo-inset">🤖</div>
+        <div class="chat-header-info">
+          <h3>Pixel Bot</h3>
+          <p>Online & Ready</p>
+        </div>
+      </div>
+      <div class="chat-history" id="chat-history">
+        <!-- Messages injected here -->
+      </div>
+      <div class="chat-input-area">
+        <input type="text" class="chat-input neo-inset" id="chat-input" placeholder="Type a message...">
+        <button class="btn-send neo-raised" onclick="sendMessage()">➤</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Country Modal -->
+<div class="modal-overlay" id="country-overlay">
+  <div class="modal-panel neo-raised">
+    <div class="modal-head">
+      <div class="modal-title">Select country</div>
+      <button class="modal-close neo-inset" data-close="country-overlay">✕</button>
+    </div>
+    <div class="country-list" id="country-list">
+      <!-- Options injected via JS -->
+    </div>
+  </div>
+</div>
+
+<div class="toast neo-raised" id="toast"></div>
+
 <script>
-const phone=document.querySelector('#phone'),button=document.querySelector('#pair'),status=document.querySelector('#status');
-let timer;
-function show(html,cls=''){status.hidden=false;status.className='status '+cls;status.innerHTML=html}
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-async function poll(id){
-  clearTimeout(timer);
-  try{
-    const r=await fetch('/api/pair/'+encodeURIComponent(id)); const data=await r.json();
-    if(!r.ok) throw new Error(data.error||'Pairing request failed');
-    if(data.status==='code_ready'){
-      show('<strong>Your pairing code</strong><div class="code">'+esc(data.code)+'</div><div class="hint">On your phone open WhatsApp → Linked devices → Link a device → Link with phone number, then enter this code.</div>');
-      timer=setTimeout(()=>poll(id),2500); return;
-    }
-    if(data.status==='connected'){show('<strong class="ok">Connected successfully.</strong><br><span class="small">WhatsApp number ending in '+esc((data.number||'').slice(-4))+' is now online.</span>','ok');button.disabled=false;button.textContent='Pair another number';return}
-    if(data.status==='error'||data.status==='disconnected'||data.status==='logged_out') throw new Error(data.error||'The pairing session ended. Please try again.');
-    show('<strong>Connecting…</strong><br><span class="small">Keep this page open while WhatsApp prepares your code.</span>');
-    timer=setTimeout(()=>poll(id),1500);
-  }catch(e){show('<strong>Pairing failed</strong><br><span class="error">'+esc(e.message)+'</span>');button.disabled=false;button.textContent='Try again'}
-}
-button.onclick=async()=>{
-  const value=phone.value.replace(/\D/g,'');
-  if(value.length<7||value.length>15){show('<span class="error">Enter a valid number with country code, for example 254712345678.</span>');return}
-  button.disabled=true;button.textContent='Starting…';show('Creating a secure pairing session…');
-  try{const r=await fetch('/api/pair/start',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone:value})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Could not start pairing');poll(d.requestId)}catch(e){show('<span class="error">'+esc(e.message)+'</span>');button.disabled=false;button.textContent='Try again'}
-};
+  // Add spin keyframes to JS to keep CSS cleaner
+  const style = document.createElement('style');
+  style.innerHTML = `@keyframes sp { to { transform: rotate(360deg); } }`;
+  document.head.appendChild(style);
+
+  const $ = (id) => document.getElementById(id);
+
+  /* --- TOAST --- */
+  let toastTimer;
+  function toast(msg) {
+    const el = $("toast");
+    el.textContent = msg;
+    el.style.display = "block";
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => (el.style.display = "none"), 2800);
+  }
+
+  /* --- MENU --- */
+  $("burger").addEventListener("click", (e) => {
+    e.stopPropagation();
+    toast("Menu clicked (Demo mode)");
+  });
+
+  /* --- COUNTRIES SIMULATION --- */
+  const countries = [
+    { name: "Kenya", code: "+254", flag: "🇰🇪" },
+    { name: "United States", code: "+1", flag: "🇺🇸" },
+    { name: "United Kingdom", code: "+44", flag: "🇬🇧" },
+    { name: "India", code: "+91", flag: "🇮🇳" },
+    { name: "South Africa", code: "+27", flag: "🇿🇦" },
+    { name: "Nigeria", code: "+234", flag: "🇳🇬" }
+  ];
+
+  function renderCountries() {
+    const el = $("country-list");
+    el.innerHTML = "";
+    countries.forEach(c => {
+      const row = document.createElement("div");
+      row.className = "country-option neo-raised";
+      row.innerHTML = `<span class="flag">${c.flag}</span><span class="cname">${c.name}</span><span class="ccode">${c.code}</span>`;
+      row.onclick = () => {
+        $("country-display").textContent = `${c.flag} ${c.name} (${c.code})`;
+        $("prefix-display").textContent = c.code;
+        close("country-overlay");
+      };
+      el.appendChild(row);
+    });
+  }
+
+  /* --- MODALS --- */
+  function open(id) { $(id).classList.add("show"); }
+  function close(id) { $(id).classList.remove("show"); }
+  document.querySelectorAll('[data-close]').forEach(btn => {
+    btn.onclick = () => close(btn.dataset.close);
+  });
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.onclick = (e) => { if(e.target === overlay) close(overlay.id); };
+  });
+
+  $("country-trigger").onclick = () => {
+    renderCountries();
+    open("country-overlay");
+  };
+
+  /* --- PAIRING FLOW SIMULATION --- */
+  $("pair-btn").addEventListener("click", () => {
+    const number = $("num-input").value.trim();
+    if (!number) return toast("Please enter your phone number");
+
+    $("pair-setup").style.display = "none";
+    $("pair-status").style.display = "block";
+    $("reset-btn").style.display = "block";
+    $("status-label").textContent = "Connecting";
+    
+    // Simulate fetching code
+    setTimeout(() => {
+      const fakeCode = "PX-" + Math.floor(1000 + Math.random() * 9000);
+      
+      $("status-label").textContent = "Your pairing code";
+      $("status-body").innerHTML = `
+        <div class="code">${fakeCode}</div>
+        <div class="hint" style="margin-bottom: 18px">Enter this code inside WhatsApp → Linked Devices</div>
+        <button class="btn neo-raised" onclick="simulateApproval()" style="margin:0 auto; max-width: 220px;">Simulate Approval</button>
+      `;
+      $("status-line").style.display = "flex";
+      $("status-text").textContent = "Waiting for you to enter code...";
+      
+    }, 1500);
+  });
+
+  $("reset-btn").onclick = () => {
+    $("pair-status").style.display = "none";
+    $("pair-setup").style.display = "block";
+    $("reset-btn").style.display = "none";
+    $("num-input").value = "";
+  };
+
+  // Simulates the user approving the code on their phone
+  function simulateApproval() {
+    $("status-text").textContent = "Approved! Generating session...";
+    $("status-dot").className = "dot ok";
+    
+    setTimeout(() => {
+      // Transition to Chat
+      $("pair-status").style.display = "none";
+      $("reset-btn").style.display = "none";
+      $("status-header").style.display = "none";
+      $("nav-badge").textContent = "Bot Active";
+      
+      const chatContainer = $("chat-container");
+      chatContainer.style.display = "flex";
+      
+      // Initial Bot Message
+      addMessage("✅ Device paired successfully! I am your Pixel X Ultra bot. How can I assist you today?", "bot");
+
+    }, 2000);
+  }
+
+  /* --- CHAT LOGIC --- */
+  const chatInput = $("chat-input");
+  const chatHistory = $("chat-history");
+
+  chatInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") sendMessage();
+  });
+
+  function sendMessage() {
+    const text = chatInput.value.trim();
+    if (!text) return;
+
+    addMessage(text, "user");
+    chatInput.value = "";
+
+    // Simulate bot reply
+    setTimeout(() => {
+      const replies = [
+        "Processing your request...",
+        "I'm a demo bot right now, but I'm styled perfectly in dark green neumorphism!",
+        "The inset shadows look great on these message bubbles.",
+        "Let me know if you need anything else."
+      ];
+      addMessage(replies[Math.floor(Math.random() * replies.length)], "bot");
+    }, 1200);
+  }
+
+  function addMessage(text, type) {
+    const row = document.createElement("div");
+    row.className = `msg-row ${type}`;
+    
+    const bubble = document.createElement("div");
+    bubble.className = `msg-bubble ${type === 'bot' ? 'neo-raised' : 'neo-inset'}`;
+    bubble.textContent = text;
+    
+    row.appendChild(bubble);
+    chatHistory.appendChild(row);
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+  }
+
 </script>
 </body>
 </html>
