@@ -34,12 +34,43 @@ const {
 } = require('./helper/listeners');
 const {
   sessionExists, listSessions, deleteSession, sessionDir,
+} = require('./helper/session');
+const { ensureSessionTable, usePostgresAuthState, deletePostgresSession } = require('./helper/pgAuthState');
+const {
   getWaSettings, setWaSetting, getAllPairs, getUserPairs,
   addPair, removePair, registerUser, numOf,
 } = require('./helper/function');
 const { ensureDir, formatUptime } = require('./helper/utils');
 const { logInfo, logSuccess, logWarn, logError, logSession } = require('./helper/logger');
 const S = require('./helper/session');
+
+// ─────────────────────────────────────────────────────────────
+//   POSTGRES AUTH STATE
+//   With DATABASE_URL set (Heroku Postgres), WhatsApp credentials are stored in the database, so a
+//   dyno restart no longer wipes them and users do not have to pair again. Without it the original
+//   file-based sessions are used, which keeps local runs unchanged.
+// ─────────────────────────────────────────────────────────────
+let pgPool = null;
+if (process.env.DATABASE_URL) {
+  try {
+    const { Pool } = require('pg');
+    const url = process.env.DATABASE_URL;
+    const isLocal = /@(localhost|127\.0\.0\.1)[:/]/.test(url);
+    pgPool = new Pool({
+      connectionString: url,
+      max: 4,
+      idleTimeoutMillis: 30000,
+      ssl: isLocal ? false : { rejectUnauthorized: false },
+    });
+    pgPool.on('error', (err) => logError('PG', err.message));
+    ensureSessionTable(pgPool)
+      .then(() => logSuccess('PG', 'auth state table ready - sessions persist across restarts'))
+      .catch((err) => logError('PG', 'auth state table: ' + err.message));
+  } catch (err) {
+    logError('PG', 'pool init failed, using file sessions: ' + err.message);
+    pgPool = null;
+  }
+}
 
 // ─────────────────────────────────────────────────────────────
 //   STYLED BUTTON (Bot API 9.4+)
@@ -509,7 +540,14 @@ async function startWhatsApp(sessionId, telegramChatId = null, pairPhone = null,
   const dir = sessionDir(sessionId);
   ensureDir(dir);
 
-  const { state, saveCreds } = await useMultiFileAuthState(dir);
+  // Postgres when configured, files otherwise.
+  let state, saveCreds;
+  if (pgPool) {
+    ({ state, saveCreds } = await usePostgresAuthState(pgPool, sessionId));
+    logSession(sessionId, 'auth state: postgres');
+  } else {
+    ({ state, saveCreds } = await useMultiFileAuthState(dir));
+  }
   const { version } = await fetchLatestBaileysVersion();
 
   const sock = makeWASocket({
@@ -586,6 +624,11 @@ async function startWhatsApp(sessionId, telegramChatId = null, pairPhone = null,
         logWarn(sessionId, 'Logged out – deleting session');
         notifiedConnected.delete(sessionId);
         deleteSession(sessionId);
+        if (pgPool) {
+          deletePostgresSession(pgPool, sessionId)
+            .then((n) => logSession(sessionId, 'auth state deleted from postgres (' + n + ' rows)'))
+            .catch((err) => logError('PG', 'delete failed: ' + err.message));
+        }
         if (tgUserId) removePair(tgUserId, sessionId);
         if (telegramChatId) {
           const mainBot = global._mainBotInstance;
