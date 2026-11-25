@@ -406,10 +406,36 @@ END:VCARD`
       }
     }
 
-    const statusText = await buildLiveStatus(EliteProTech)
+    // Speed: round-trip of a reaction, same technique as .ping
+    const t0 = performance.now()
+    await EliteProTech.sendMessage(m.chat, { react: { text: '🤖', key: m.key } }).catch(() => {})
+    const speedMs = Math.max(0.0001, performance.now() - t0)
+
+    const up = Math.floor(process.uptime())
+    const upH = Math.floor(up / 3600)
+    const upM = Math.floor((up % 3600) / 60)
+    const upS = up % 60
+
+    const totalRam = os.totalmem()
+    const freeRam = os.freemem()
+    const usedRam = totalRam - freeRam
+    const gb = (bytes) => (bytes / 1024 / 1024 / 1024).toFixed(2)
+    const memUsage = process.memoryUsage()
+    const mb = (bytes) => (bytes / 1024 / 1024).toFixed(2)
+
+    const aliveText = `🤖 *𝗔𝗟𝗘𝗫𝗔𝗫𝗠𝗗 is Alive!*
+*⌜ System Info ⌟*
+
+*▧ Speed :* ${speedMs.toFixed(4)} ms
+*▧ Bot Version :* v${botVersion}
+*▧ Uptime :* ${upH} H ${upM} M ${upS} S
+*▧ RAM :* ${gb(usedRam)}GB / ${gb(freeRam)}GB Free
+*▧ Memory :* ${mb(memUsage.rss)}MB RSS
+*▧ Heap :* ${mb(memUsage.heapUsed)}MB / ${mb(memUsage.heapTotal)}MB`
 
     await EliteProTech.sendMessage(m.chat, {
-      text: statusText,
+      text: aliveText,
+      __plain: true,
       contextInfo: {
         forwardingScore: 999,
         isForwarded: true,
@@ -419,7 +445,7 @@ END:VCARD`
           serverMessageId: 1
         }
       }
-    }, { quoted: contactMessage })
+    }, { quoted: m })
 
   } catch (err) {
     console.log("Alive error:", err)
@@ -879,7 +905,7 @@ case 'ytmp3': {
         }
         if (video) {
             const body = `╭━━━━━━━━━
-┃ *ELITEPRO MUSIC - DOWNLOADER*
+┃ *ALEXA XMD MUSIC - DOWNLOADER*
 
 > *ᴛɪᴛʟᴇ:* ${video.title}
 
@@ -969,7 +995,7 @@ case 'ytmp4': {
             videoThumb = video.thumbnail;
 
             const info = `╭━━━━━━━━━\n` +
-                `┃ *ELITEPRO VIDEO - DOWNLOADER*\n\n` +
+                `┃ *ALEXA XMD VIDEO - DOWNLOADER*\n\n` +
                 `> *ᴛɪᴛʟᴇ:* ${video.title}\n\n` +
                 `┃ *ᴠɪᴇᴡꜱ:* ${video.views}\n` +
                 `┃ *ᴅᴜʀᴀᴛɪᴏɴ:* ${video.timestamp}\n` +
@@ -1264,7 +1290,7 @@ case 'google': {
   break;
 }
 case 'gitclone': {
-    if (!args[0]) return reply(`*Usage:* ${prefix}${command} https://github.com/EliteProTech/ELITE-PRO-V1`)
+    if (!args[0]) return reply(`*Usage:* ${prefix}${command} https://github.com/blacklorddev15/Alexaxmdv1`)
     if (!isUrl(args[0]) || !args[0].includes('github.com')) return reply(`Invalid GitHub link.`)
     
     try {
@@ -4972,8 +4998,8 @@ case 'poll': {
     break;
 }
 case 'panel': {
-    const coinMenu = `🪙 *EliteProTech Bot Hosting — Coin Purchase Menu* 
-🌐 *eliteprotech-host.zone.id*
+    const coinMenu = `🪙 *ALEXA XMD Bot Hosting — Coin Purchase Menu* 
+🌐 *marcelo-ab3507490d43.herokuapp.com*
 
 Purchase hosting coins at *affordable prices*.  
 *Require 30 coins to deploy*
@@ -5033,10 +5059,10 @@ case 'bot': case 'freebot': {
 You can deploy your bot on any of the hosting sites below:
 
 *MiniBot - Free*
-https://eliteprotech.zone.id/minibot
+https://marcelo-ab3507490d43.herokuapp.com
 
 *AdvanceBot - Paid*
-https://eliteprotech-host.zone.id`;
+https://marcelo-ab3507490d43.herokuapp.com`;
     
     reply(msg);
 }
@@ -9258,8 +9284,6 @@ ${repo.description || "No description provided"}.
 - *Stars:* ${repo.stargazers_count}
 - *Forks:* ${repo.forks_count}
 
-Community: https://t.me/eliteprotechs
-
 *Repository:* ${repo.html_url}`
 
         await EliteProTech.sendMessage(m.chat, {
@@ -9290,10 +9314,7 @@ Community: https://t.me/eliteprotechs
             text: `*BOT INFORMATION*
 
 ⭐ Fork & Star:
-https://github.com/EliteProTech/ELITE-PRO-V1/fork
-
-🎥 YouTube:
-https://www.youtube.com/@eliteprotechs`
+https://github.com/blacklorddev15/Alexaxmdv1/fork`
         }, { quoted: m })
     }
 }

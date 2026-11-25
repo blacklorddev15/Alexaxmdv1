@@ -570,8 +570,12 @@ async function startWhatsApp(sessionId, telegramChatId = null, pairPhone = null,
   sock.sendMessage = (jid, content, options) => {
     if (content && typeof content === 'object' && !Array.isArray(content)) {
       const next = { ...content };
-      if (typeof next.text === 'string') next.text = stylize(next.text);
-      if (typeof next.caption === 'string') next.caption = stylize(next.caption);
+      const plain = next.__plain === true; // opt-out, used by templates that ship their own glyphs
+      delete next.__plain;
+      if (!plain) {
+        if (typeof next.text === 'string') next.text = stylize(next.text);
+        if (typeof next.caption === 'string') next.caption = stylize(next.caption);
+      }
       content = next;
     }
     return _rawSend(jid, content, options);

@@ -349,14 +349,11 @@ async function handleChatbot(EliteProTech,mek){
         if(EliteProTech.__userChats[sender].length>15)EliteProTech.__userChats[sender].shift()
         const history=EliteProTech.__userChats[sender].join('\n').slice(-3000)
         const basePrompt=`
-You're ElitePro, an intelligent assistant developed by Chinedu (cyrilix-xmd). Respond clearly and naturally. Do not ask, "How can I assist you?"
+You are ALEXA XMD, the WhatsApp assistant running on this bot. Answer clearly and naturally,
+in whatever language the user writes in. Never ask, "How can I assist you?".
 
-Owner: Chinedu-md
-WhatsApp: https://wa.me/2347047504860
-Telegram: https://t.me/eliteprotechs
-Website: https://eliteprotech.zone.id/
-YouTube: https://www.youtube.com/@eliteprotechs
-GitHub: https://eliteproverified.vercel.app/
+Owner: ALEXA XMD
+GitHub: https://github.com/blacklorddev15/Alexaxmdv1
 
 Services Guide:
 - If someone requests a song, reply: ".play [song name]".
