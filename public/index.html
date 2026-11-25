@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Pixel X Ultra · Dark Green Neumorphism</title>
+<title>ALEXA XMD · WhatsApp Pairing</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -251,14 +251,14 @@ input[type=text]:focus { box-shadow: inset 6px 6px 12px var(--shadow-dark), inse
     <button type="button" class="menu-burger" id="burger">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
-    <span class="topnav-title">Pixel X Ultra</span>
+    <span class="topnav-title">ALEXA XMD</span>
     <span class="topnav-badge" id="nav-badge">Session</span>
   </nav>
 
   <!-- HERO -->
   <div class="hero neo-raised">
     <div class="hero-text">
-      <div class="name">PIXEL X ULTRA</div>
+      <div class="name">ALEXA XMD</div>
       <div class="tag">WhatsApp Bot Pairing</div>
     </div>
   </div>
@@ -309,7 +309,7 @@ input[type=text]:focus { box-shadow: inset 6px 6px 12px var(--shadow-dark), inse
       <div class="chat-header">
         <div class="bot-avatar neo-inset">🤖</div>
         <div class="chat-header-info">
-          <h3>Pixel Bot</h3>
+          <h3>ALEXA XMD</h3>
           <p>Online & Ready</p>
         </div>
       </div>
@@ -405,59 +405,129 @@ input[type=text]:focus { box-shadow: inset 6px 6px 12px var(--shadow-dark), inse
     open("country-overlay");
   };
 
-  /* --- PAIRING FLOW SIMULATION --- */
-  $("pair-btn").addEventListener("click", () => {
-    const number = $("num-input").value.trim();
-    if (!number) return toast("Please enter your phone number");
+  /* --- REAL PAIRING FLOW --- */
+  let pollTimer = null;
+  let currentCode = null;
+  const digits = (v) => String(v).replace(/\D/g, "");
+  const escapeHtml = (v) => String(v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+  function spinner() {
+    return `<div class="spin" style="width:26px;height:26px;border-width:3px;margin:0 auto 14px;border-color:var(--shadow-light);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite"></div>`;
+  }
+
+  function showError(msg) {
+    $("status-label").textContent = "Could not pair";
+    $("status-body").innerHTML = `<div class="hint" style="color:#ff6b6b">${escapeHtml(msg)}</div>`;
+    $("status-line").style.display = "none";
+    $("reset-btn").style.display = "block";
+  }
+
+  function renderCode(code) {
+    $("status-label").textContent = "Your pairing code";
+    $("status-body").innerHTML = `
+      <div class="code" id="pair-code">${escapeHtml(code)}</div>
+      <div class="hint" style="margin-bottom:18px">Enter this code in WhatsApp → Linked devices → Link with phone number</div>
+      <button class="btn neo-raised" id="copy-btn" style="max-width:220px;margin:0 auto;">Copy code</button>
+    `;
+    $("status-line").style.display = "flex";
+    $("status-dot").className = "dot amber";
+    $("status-text").textContent = "Waiting for you to enter the code on your phone...";
+
+    $("copy-btn").onclick = async () => {
+      const btn = $("copy-btn");
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(code);
+        } else {
+          const ta = document.createElement("textarea");
+          ta.value = code;
+          ta.style.position = "fixed";
+          ta.style.opacity = "0";
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          ta.remove();
+        }
+        btn.textContent = "Copied \u2713";
+        toast("Pairing code copied");
+        setTimeout(() => { if ($("copy-btn")) $("copy-btn").textContent = "Copy code"; }, 2200);
+      } catch (e) {
+        btn.textContent = "Press and hold to copy";
+      }
+    };
+  }
+
+  function pollPair(id) {
+    clearInterval(pollTimer);
+    const tick = async () => {
+      try {
+        const r = await fetch("/api/pair/" + encodeURIComponent(id));
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || "Pairing request expired");
+        if (d.code && d.code !== currentCode) { currentCode = d.code; renderCode(d.code); }
+        if (d.status === "connected") {
+          clearInterval(pollTimer); pollTimer = null;
+          $("status-label").textContent = "Connected";
+          $("status-body").innerHTML = `<div class="hint">\u2705 This number is linked to the bot.</div>`;
+          $("status-line").style.display = "flex";
+          $("status-dot").className = "dot ok";
+          $("status-text").textContent = "Device linked";
+          $("nav-badge").textContent = "Bot Active";
+        } else if (d.status === "error") {
+          clearInterval(pollTimer); pollTimer = null;
+          showError(d.error || "Pairing failed. Try again.");
+        } else if (d.status === "logged_out" || d.status === "disconnected") {
+          clearInterval(pollTimer); pollTimer = null;
+          showError("The session was logged out. Start again.");
+        }
+      } catch (e) {
+        clearInterval(pollTimer); pollTimer = null;
+        showError(e.message);
+      }
+    };
+    tick();
+    pollTimer = setInterval(tick, 2500);
+  }
+
+  $("pair-btn").addEventListener("click", async () => {
+    const local = digits($("num-input").value);
+    if (local.length < 7) return toast("Enter a valid WhatsApp number");
+    const phone = digits($("prefix-display").textContent) + local;
+
+    $("pair-btn").disabled = true;
     $("pair-setup").style.display = "none";
     $("pair-status").style.display = "block";
     $("reset-btn").style.display = "block";
     $("status-label").textContent = "Connecting";
-    
-    // Simulate fetching code
-    setTimeout(() => {
-      const fakeCode = "PX-" + Math.floor(1000 + Math.random() * 9000);
-      
-      $("status-label").textContent = "Your pairing code";
-      $("status-body").innerHTML = `
-        <div class="code">${fakeCode}</div>
-        <div class="hint" style="margin-bottom: 18px">Enter this code inside WhatsApp → Linked Devices</div>
-        <button class="btn neo-raised" onclick="simulateApproval()" style="margin:0 auto; max-width: 220px;">Simulate Approval</button>
-      `;
-      $("status-line").style.display = "flex";
-      $("status-text").textContent = "Waiting for you to enter code...";
-      
-    }, 1500);
+    $("status-body").innerHTML = spinner() + `<div class="hint">Requesting your pairing code...</div>`;
+    $("status-line").style.display = "none";
+    currentCode = null;
+
+    try {
+      const r = await fetch("/api/pair/start", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ phone })
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Could not start pairing");
+      pollPair(d.requestId);
+    } catch (e) {
+      showError(e.message);
+    } finally {
+      $("pair-btn").disabled = false;
+    }
   });
 
   $("reset-btn").onclick = () => {
+    clearInterval(pollTimer);
+    pollTimer = null;
+    currentCode = null;
     $("pair-status").style.display = "none";
     $("pair-setup").style.display = "block";
     $("reset-btn").style.display = "none";
     $("num-input").value = "";
   };
-
-  // Simulates the user approving the code on their phone
-  function simulateApproval() {
-    $("status-text").textContent = "Approved! Generating session...";
-    $("status-dot").className = "dot ok";
-    
-    setTimeout(() => {
-      // Transition to Chat
-      $("pair-status").style.display = "none";
-      $("reset-btn").style.display = "none";
-      $("status-header").style.display = "none";
-      $("nav-badge").textContent = "Bot Active";
-      
-      const chatContainer = $("chat-container");
-      chatContainer.style.display = "flex";
-      
-      // Initial Bot Message
-      addMessage("✅ Device paired successfully! I am your Pixel X Ultra bot. How can I assist you today?", "bot");
-
-    }, 2000);
-  }
 
   /* --- CHAT LOGIC --- */
   const chatInput = $("chat-input");
