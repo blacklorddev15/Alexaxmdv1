@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ALEXA XMD · WhatsApp Pairing</title>
+  <style>
+    :root{color-scheme:dark;--bg:#102018;--card:#172b20;--text:#e8f5ec;--muted:#9fc0aa;--green:#25d366;--line:#294838}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at top,#1b3b2a,#0c1711 58%);font:16px system-ui,sans-serif;color:var(--text);display:grid;place-items:center;padding:18px}
+    main{width:min(100%,460px)}.brand{text-align:center;margin-bottom:18px}.brand h1{margin:0;font-size:2rem}.brand p{margin:7px 0;color:var(--muted)}
+    .card{background:rgba(23,43,32,.96);border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:0 18px 50px #0007}.label{display:block;color:var(--muted);font-size:.82rem;margin:0 0 8px;text-transform:uppercase;letter-spacing:.08em}
+    input{width:100%;border:1px solid var(--line);border-radius:13px;background:#0d1b13;color:var(--text);padding:14px;font-size:1rem;outline:none}input:focus{border-color:var(--green)}button{width:100%;border:0;border-radius:13px;padding:14px;margin-top:14px;background:var(--green);color:#06200e;font-weight:800;font-size:1rem;cursor:pointer}button:disabled{opacity:.55;cursor:wait}.status{margin-top:18px;padding:16px;border:1px solid var(--line);border-radius:15px;background:#0d1b13;line-height:1.5}.code{font:800 2rem ui-monospace,monospace;letter-spacing:.18em;color:var(--green);text-align:center;margin:12px 0}.hint,.small{color:var(--muted);font-size:.88rem}.error{color:#ff9f9f}.ok{color:var(--green)}ol{padding-left:20px;margin-bottom:0}footer{text-align:center;color:var(--muted);font-size:.75rem;margin-top:14px}
+  </style>
+</head>
+<body>
+<main>
+  <header class="brand"><h1>𝘼𝙇𝙀𝙓𝘼 𝙓𝙈𝘿</h1><p>Secure WhatsApp pairing portal</p></header>
+  <section class="card">
+    <label class="label" for="phone">WhatsApp number with country code</label>
+    <input id="phone" inputmode="numeric" autocomplete="tel" placeholder="254712345678" maxlength="15">
+    <button id="pair">Generate pairing code</button>
+    <div id="status" class="status" hidden></div>
+  </section>
+  <footer>Never share your pairing code. This page does not ask for your WhatsApp password.</footer>
+</main>
+<script>
+const phone=document.querySelector('#phone'),button=document.querySelector('#pair'),status=document.querySelector('#status');
+let timer;
+function show(html,cls=''){status.hidden=false;status.className='status '+cls;status.innerHTML=html}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+async function poll(id){
+  clearTimeout(timer);
+  try{
+    const r=await fetch('/api/pair/'+encodeURIComponent(id)); const data=await r.json();
+    if(!r.ok) throw new Error(data.error||'Pairing request failed');
+    if(data.status==='code_ready'){
+      show('<strong>Your pairing code</strong><div class="code">'+esc(data.code)+'</div><div class="hint">On your phone open WhatsApp → Linked devices → Link a device → Link with phone number, then enter this code.</div>');
+      timer=setTimeout(()=>poll(id),2500); return;
+    }
+    if(data.status==='connected'){show('<strong class="ok">Connected successfully.</strong><br><span class="small">WhatsApp number ending in '+esc((data.number||'').slice(-4))+' is now online.</span>','ok');button.disabled=false;button.textContent='Pair another number';return}
+    if(data.status==='error'||data.status==='disconnected'||data.status==='logged_out') throw new Error(data.error||'The pairing session ended. Please try again.');
+    show('<strong>Connecting…</strong><br><span class="small">Keep this page open while WhatsApp prepares your code.</span>');
+    timer=setTimeout(()=>poll(id),1500);
+  }catch(e){show('<strong>Pairing failed</strong><br><span class="error">'+esc(e.message)+'</span>');button.disabled=false;button.textContent='Try again'}
+}
+button.onclick=async()=>{
+  const value=phone.value.replace(/\D/g,'');
+  if(value.length<7||value.length>15){show('<span class="error">Enter a valid number with country code, for example 254712345678.</span>');return}
+  button.disabled=true;button.textContent='Starting…';show('Creating a secure pairing session…');
+  try{const r=await fetch('/api/pair/start',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone:value})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Could not start pairing');poll(d.requestId)}catch(e){show('<span class="error">'+esc(e.message)+'</span>');button.disabled=false;button.textContent='Try again'}
+};
+</script>
+</body>
+</html>

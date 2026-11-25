@@ -1,0 +1,17 @@
+{
+  "name": "ALEXA XMD",
+  "description": "ALEXA XMD WhatsApp and Telegram bot with web pairing",
+  "repository": "https://github.com/blacklorddev15/ping",
+  "logo": "",
+  "keywords": ["whatsapp", "telegram", "baileys", "bot"],
+  "stack": "heroku-24",
+  "buildpacks": [{ "url": "heroku/nodejs" }],
+  "env": {
+    "TELEGRAM_TOKEN": { "required": false, "description": "Optional Telegram bot token" },
+    "OWNER_TELEGRAM_ID": { "required": false },
+    "OWNER_NAME": { "required": false, "value": "ALEXA XMD" },
+    "PANEL_DOMAIN": { "required": false },
+    "PANEL_APIKEY": { "required": false },
+    "DEFAULT_PREFIX": { "required": false, "value": "." }
+  }
+}
