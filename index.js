@@ -34,12 +34,10 @@ const {
 } = require('./helper/listeners');
 const {
   sessionExists, listSessions, deleteSession, sessionDir,
-} = require('./helper/session');
-const { ensureSessionTable, usePostgresAuthState, deletePostgresSession } = require('./helper/pgAuthState');
-const {
   getWaSettings, setWaSetting, getAllPairs, getUserPairs,
   addPair, removePair, registerUser, numOf,
 } = require('./helper/function');
+const { ensureSessionTable, usePostgresAuthState, deletePostgresSession } = require('./helper/pgAuthState');
 const { ensureDir, formatUptime } = require('./helper/utils');
 const { logInfo, logSuccess, logWarn, logError, logSession } = require('./helper/logger');
 const S = require('./helper/session');
