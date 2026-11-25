@@ -373,9 +373,27 @@ async function buildLiveStatus(EliteProTech) {
 switch (command) {
 case 'ping': {
     const start = performance.now()
-    EliteProTech.sendMessage(m.chat, { react: { text: "⚙️", key: m.key } }).catch(() => {})
+    await EliteProTech.sendMessage(m.chat, { react: { text: "⚙️", key: m.key } }).catch(() => {})
     const latency = Math.max(0, performance.now() - start)
-    await EliteProTech.sendMessage(m.chat, { text: `⚡ ${latency.toFixed(0)} ms` }, { quoted: m })
+    const activePrefix = global.prefix !== undefined && global.prefix !== null ? global.prefix : '.'
+    try {
+      await EliteProTech.sendMessage(m.chat, {
+        text: `Bot pong ${latency.toFixed(0)}ms`,
+        __plain: true,
+        footer: '𝗔𝗟𝗘𝗫𝗔 𝗫𝗠𝗗',
+        templateButtons: [
+          { index: 1, quickReplyButton: { displayText: 'Ping', id: `${activePrefix}ping` } },
+          { index: 2, urlButton: { displayText: 'Website', url: 'https://marcelo-ab3507490d43.herokuapp.com' } },
+        ],
+      }, { quoted: m })
+    } catch (buttonErr) {
+      // Some clients reject template buttons; the text must still arrive.
+      console.log('Ping buttons rejected:', buttonErr.message)
+      await EliteProTech.sendMessage(m.chat, {
+        text: `Bot pong ${latency.toFixed(0)}ms\n\nWebsite: https://marcelo-ab3507490d43.herokuapp.com`,
+        __plain: true,
+      }, { quoted: m })
+    }
 }
 break
 case 'alive':
