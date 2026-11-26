@@ -422,6 +422,9 @@ const TRANSLATIONS = {
 //   SOCKETS
 // ─────────────────────────────────────────────────────────────
 const activeSockets = new Map();
+// One pending reconnect timer per session. Without this a flapping connection can queue
+// several startWhatsApp() calls for the same session and run them concurrently.
+const reconnectTimers = new Map();
 const notifiedConnected = new Set();
 const webPairRequests = new Map();
 global._activeSockets = activeSockets;
@@ -678,7 +681,20 @@ async function startWhatsApp(sessionId, telegramChatId = null, pairPhone = null,
   sock.ev.on('connection.update', async ({ connection, lastDisconnect }) => {
     if (connection === 'close') {
       const code = lastDisconnect?.error?.output?.statusCode;
+      // A socket that has closed is still holding its signal-store cache, group metadata and
+      // event listeners. Dropping the map entry alone leaks the whole socket: the connection
+      // flaps, each cycle keeps another copy alive, and the dyno dies with R15. Tear the old
+      // socket down explicitly before anything new is created.
+      const dying = activeSockets.get(sessionId);
       activeSockets.delete(sessionId);
+      if (dying) {
+        try { dying.ev.removeAllListeners('connection.update'); } catch {}
+        try { dying.ev.removeAllListeners('creds.update'); } catch {}
+        try { dying.ev.removeAllListeners('messages.upsert'); } catch {}
+        try { dying.end(undefined); } catch {}
+        try { dying.ws?.close(); } catch {}
+        logSession(sessionId, 'socket torn down');
+      }
       if (webPairId && webPairRequests.has(webPairId)) {
         const request = webPairRequests.get(webPairId);
         if (code === DisconnectReason.loggedOut) request.status = 'logged_out';
@@ -704,7 +720,14 @@ async function startWhatsApp(sessionId, telegramChatId = null, pairPhone = null,
         }
       } else {
         logWarn(sessionId, 'Reconnecting...');
-        setTimeout(() => startWhatsApp(sessionId, telegramChatId, null, tgUserId), 3000);
+        if (!reconnectTimers.has(sessionId)) {
+          const t = setTimeout(() => {
+            reconnectTimers.delete(sessionId);
+            startWhatsApp(sessionId, telegramChatId, null, tgUserId)
+              .catch(e => logError(sessionId, 'reconnect failed: ' + e.message));
+          }, 3000);
+          reconnectTimers.set(sessionId, t);
+        }
       }
     }
     if (connection === 'open') {
@@ -720,6 +743,8 @@ async function startWhatsApp(sessionId, telegramChatId = null, pairPhone = null,
       if (tgUserId) addPair(tgUserId, sessionId, waNum);
       const c = getWaSettings(waNum);
       if (!c.owner) setWaSetting(waNum, 'owner', waNum);
+      const pendingReconnect = reconnectTimers.get(sessionId);
+      if (pendingReconnect) { clearTimeout(pendingReconnect); reconnectTimers.delete(sessionId); }
       logSession(sessionId, 'connected');
       logSuccess(sessionId, `wa.me/${waNum}`);
       if (telegramChatId && !notifiedConnected.has(sessionId)) {
@@ -1675,7 +1700,8 @@ function startPingLoop() {
 
   setInterval(() => {
     const uptime = formatUptime(Date.now() - global.botStartTime);
-    process.stdout.write(chalk.gray(`[UPTIME] ${uptime} · sessions: ${activeSockets.size}\n`));
+    const rssMb = Math.round(process.memoryUsage().rss / 1024 / 1024);
+    process.stdout.write(chalk.gray(`[UPTIME] ${uptime} · sessions: ${activeSockets.size} · rss: ${rssMb}MB\n`));
   }, 4 * 60 * 1000);
 }
 
