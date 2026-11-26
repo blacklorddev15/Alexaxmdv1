@@ -1608,6 +1608,27 @@ function startPingLoop() {
     return res.status(202).json({ requestId: id, status: request.status });
   });
 
+  // Diagnostic: proves a reply can actually reach the linked number, without involving WhatsApp on
+  // the operator's side. Disabled unless SELFTEST_KEY is set.
+  app.post('/api/selftest', async (req, res) => {
+    const key = req.get('x-selftest-key') || req.query.key;
+    if (!process.env.SELFTEST_KEY || key !== process.env.SELFTEST_KEY) {
+      return res.status(403).json({ error: 'forbidden' });
+    }
+    const entries = [...activeSockets.entries()];
+    if (!entries.length) return res.status(409).json({ error: 'no active session' });
+    const [sessionId, sock] = entries[0];
+    const phone = sessionId.split('_').pop();
+    const target = `${phone}@s.whatsapp.net`;
+    const started = Date.now();
+    try {
+      const sent = await sock.sendMessage(target, { text: `Selftest ${new Date().toISOString()}` });
+      res.json({ ok: true, target, ms: Date.now() - started, id: sent && sent.key && sent.key.id });
+    } catch (err) {
+      res.status(502).json({ ok: false, target, error: err.message });
+    }
+  });
+
   app.get('/api/pair/:id', (req, res) => {
     const request = webPairRequests.get(String(req.params.id));
     if (!request) return res.status(404).json({ error: 'Pairing request not found or expired.' });
