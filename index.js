@@ -598,7 +598,11 @@ async function startWhatsApp(sessionId, telegramChatId = null, pairPhone = null,
       }
       content = next;
     }
-    return _rawSend(jid, content, options);
+    return _rawSend(jid, content, options).catch((err) => {
+      // Never fail silently: an undelivered reply is otherwise indistinguishable from a crash.
+      logError('SEND', `${jid} [${content && Object.keys(content).join('/')}]: ${err.message}`);
+      throw err;
+    });
   };
 
   sock.__sessionId = sessionId;

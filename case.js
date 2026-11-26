@@ -248,13 +248,32 @@ async function handleMessage(sock, m, chatMeta = {}) {
   ) || '';
 
   // ── Core vars ─────────────────────────────────────────────
-  const from         = m.key.remoteJid;
+  // WhatsApp now addresses some chats by LID (e.g. 13950943031501@lid) instead of the phone JID.
+  // Sending to a bare LID is accepted but silently never delivered, so every target is resolved to
+  // its phone number first: the key carries it in remoteJidAlt/participantAlt, and the signal
+  // repository can map it when the key does not.
+  async function resolvePn(jidStr, alt) {
+    if (!jidStr || !jidStr.endsWith('@lid')) return jidStr;
+    if (alt) return alt.includes('@') ? alt : `${alt}@s.whatsapp.net`;
+    try {
+      const pn = await sock.signalRepository?.lidMapping?.getPNForLID?.(jidStr);
+      if (pn) return pn.includes('@') ? pn : `${pn}@s.whatsapp.net`;
+    } catch {}
+    return jidStr;
+  }
+
+  const rawFrom      = m.key.remoteJid;
+  const from         = await resolvePn(rawFrom, m.key.remoteJidAlt);
   const jid          = from;
   const isGroup      = from.endsWith('@g.us');
   const botNumber    = normNum(sock.user?.id || '');
   const sender       = m.key.fromMe
     ? botNumber + '@s.whatsapp.net'
-    : (m.key.participant || m.key.remoteJid);
+    : await resolvePn(m.key.participant || rawFrom, m.key.participantAlt || m.key.remoteJidAlt);
+
+  if (rawFrom !== from) {
+    console.log(`[JID] resolved ${rawFrom} -> ${from}`);
+  }
   const senderNumber = sender.split('@')[0];
   const pushname     = m.pushName || 'No Name';
 
