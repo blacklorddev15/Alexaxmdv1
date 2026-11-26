@@ -393,7 +393,6 @@ console.log('[PACK] dispatch: cmd=%j public=%s creator=%s fromMe=%s chat=%s text
     // button message and silently discards the ones it dislikes (relayMessage reports no
     // error either way), so every supported shape is sent once, labelled, to see which
     // ones actually render. Delete this case once the winning shape is known.
-    const { generateWAMessageFromContent } = require('@whiskeysockets/baileys')
     const btnPrefix = global.prefix !== undefined && global.prefix !== null ? global.prefix : '.'
     const btnUrl = process.env.PANEL_URL || 'https://marcelo-ab3507490d43.herokuapp.com'
     const btnButtons = [
@@ -450,7 +449,6 @@ console.log('[PACK] dispatch: cmd=%j public=%s creator=%s fromMe=%s chat=%s text
     // Baileys v7 removed the `buttons`/`templateButtons` helpers: they are ignored, so the reply
     // arrives with no buttons. Sending a native interactive message is the supported path.
     try {
-      const { generateWAMessageFromContent } = require('@whiskeysockets/baileys')
       // Full native-flow shape: viewOnceMessageV2 wrapper (the current one, not the legacy
       // viewOnceMessage), an explicit header with hasMediaAttachment:false, and
       // messageVersion 3. relayMessage reports success for every wrapper it is handed,
@@ -10620,6 +10618,39 @@ const randomReaction = reactions[Math.floor(Math.random() * reactions.length)];
      await EliteProTech.sendMessage(m.chat, { text: blockquotedMenu })
      console.log('[MENU] text fallback ok')
    } catch (e) { console.log('[MENU] text fallback failed:', e.message) }
+ }
+
+ // The same two buttons as .ping, sent as their own native-flow message. An interactive
+ // message cannot carry a media header here: when media is attached the visible text must
+ // be passed as `caption`, not `body.text`, which is why the menu picture and the buttons
+ // are two messages rather than one.
+ try {
+   const menuPrefix = global.prefix !== undefined && global.prefix !== null ? global.prefix : '.'
+   const menuUrl = process.env.PANEL_URL || 'https://marcelo-ab3507490d43.herokuapp.com'
+   const menuInteractive = generateWAMessageFromContent(m.chat, {
+     viewOnceMessageV2: {
+       message: {
+         messageContextInfo: { deviceListMetadata: {}, deviceListMetadataVersion: 2 },
+         interactiveMessage: {
+           header: { title: 'ALEXA XMD', hasMediaAttachment: false },
+           body: { text: 'Choose an action' },
+           footer: { text: menuUrl },
+           nativeFlowMessage: {
+             buttons: [
+               { name: 'quick_reply', buttonParamsJson: JSON.stringify({ display_text: 'Ping', id: `${menuPrefix}ping` }) },
+               { name: 'cta_url', buttonParamsJson: JSON.stringify({ display_text: 'Website', url: menuUrl, merchant_url: menuUrl }) },
+             ],
+             messageParamsJson: '',
+             messageVersion: 3,
+           },
+         },
+       },
+     },
+   }, { userJid: EliteProTech.user.id })
+   await EliteProTech.relayMessage(m.chat, menuInteractive.message, { messageId: menuInteractive.key.id })
+   console.log('[MENU] buttons relayed', menuInteractive.key.id)
+ } catch (menuBtnErr) {
+   console.log('[MENU] buttons failed:', menuBtnErr.message)
  }
  break
  }
