@@ -48,10 +48,12 @@ async function usePostgresAuthState(pool, sessionId) {
   };
 
   const writeRow = (key, value) => pool.query(
-    `INSERT INTO ${TABLE} (session_id, key, value, updated_at) VALUES ($1, $2, $3, now())
+    `INSERT INTO ${TABLE} (session_id, key, value, updated_at) VALUES ($1, $2, $3::jsonb, now())
      ON CONFLICT (session_id, key)
      DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
-    [sessionId, key, encode(value)]);
+    // Serialised explicitly: some Baileys keys are bare strings, and node-postgres sends a JS
+    // string verbatim, which Postgres then rejects as "invalid input syntax for type json".
+    [sessionId, key, JSON.stringify(encode(value))]);
 
   const deleteRow = (key) => pool.query(
     `DELETE FROM ${TABLE} WHERE session_id = $1 AND key = $2`, [sessionId, key]);
