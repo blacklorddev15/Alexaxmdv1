@@ -274,6 +274,12 @@ async function handleMessage(sock, m, chatMeta = {}) {
   if (rawFrom !== from) {
     console.log(`[JID] resolved ${rawFrom} -> ${from}`);
   }
+  // The command pack sends to m.chat, not to the variable above, so the target has to be retargeted
+  // too - otherwise every reply goes to the LID and is silently dropped.
+  if (m.chat !== from) {
+    console.log(`[JID] chat retargeted ${m.chat} -> ${from}`);
+    m.chat = from;
+  }
   const senderNumber = sender.split('@')[0];
   const pushname     = m.pushName || 'No Name';
 
