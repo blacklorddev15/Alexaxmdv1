@@ -277,6 +277,7 @@ if (global.autorecordtype) {
 }
 
 if (!EliteProTech.public) {
+    console.log('[PACK] self-mode gate: isCreator=%s fromMe=%s sender=%s', isCreator, m.key.fromMe, from)
     if (!isCreator && !m.key.fromMe) return
 }
 
@@ -370,6 +371,8 @@ async function buildLiveStatus(EliteProTech) {
 > ┗━━━━━━━━━━━━━❍`
 }
 
+console.log('[PACK] dispatch: cmd=%j public=%s creator=%s fromMe=%s chat=%s text=%j',
+    command, EliteProTech.public, isCreator, m.key?.fromMe, m.chat, String(m.text || '').slice(0, 24))
 switch (command) {
 case 'ping': {
     const start = performance.now()
