@@ -379,8 +379,15 @@ case 'ping': {
     await EliteProTech.sendMessage(m.chat, { react: { text: "⚙️", key: m.key } }).catch(() => {})
     const latency = Math.max(0, performance.now() - start)
     const activePrefix = global.prefix !== undefined && global.prefix !== null ? global.prefix : '.'
-    const panelUrl = 'https://marcelo-ab3507490d43.herokuapp.com'
+    const panelUrl = process.env.PANEL_URL || 'https://marcelo-ab3507490d43.herokuapp.com'
     const pongText = `Alexaxmd pong ${latency.toFixed(0)}ms`
+
+    // Plain text first. This is the same call shape that the /api/selftest probe proved
+    // works on this socket, so it cannot be masked by a malformed button payload.
+    // If buttons work too, WhatsApp replaces this with the interactive version below.
+    await EliteProTech.sendMessage(m.chat, { text: pongText }, { quoted: m }).catch(e => {
+      console.log('[PING] text send failed:', e.message)
+    })
 
     // Baileys v7 removed the `buttons`/`templateButtons` helpers: they are ignored, so the reply
     // arrives with no buttons. Sending a native interactive message is the supported path.
@@ -10517,18 +10524,37 @@ ${readmore}
 > ᴘᴏᴡᴇʀᴇᴅ ʙʏ 𝘼𝙇𝙀𝙓𝘼 𝙓𝙈𝘿`; 
 const reactions = ["✅", "🔥", "😎", "👌", "😏", "🌟", "⚡", "💥", "🎉", "🧘", "🥺", "😉", "🔔", "🤫"];
 const randomReaction = reactions[Math.floor(Math.random() * reactions.length)];
-const blockquotedMenu = elitemenuoh.split('\n')
+ const blockquotedMenu = elitemenuoh.split('\n')
   .map(line => line.startsWith('>') ? line : `> ${line}`)
   .join('\n');
-await EliteProTech.sendMessage(m.chat, {
-    react: { text: randomReaction, key: m.key } 
-  }); 
-await EliteProTech.sendMessage(m.chat, {
-  image: elitepropic,
-  caption: blockquotedMenu
-}, { quoted: m });
-break
-}
+ try { await EliteProTech.sendMessage(m.chat, { react: { text: randomReaction, key: m.key } }) } catch {}
+
+ // Three attempts, each strictly simpler than the last, so a failure names its own cause:
+ // quoted image -> unquoted image -> plain text. Any success stops the chain.
+ const menuMedia = elitepropic || null
+ let menuSent = false
+ try {
+   if (menuMedia) {
+     await EliteProTech.sendMessage(m.chat, { image: menuMedia, caption: blockquotedMenu }, { quoted: m })
+     menuSent = true
+     console.log('[MENU] image+quote ok')
+   }
+ } catch (e) { console.log('[MENU] image+quote failed:', e.message) }
+ if (!menuSent && menuMedia) {
+   try {
+     await EliteProTech.sendMessage(m.chat, { image: menuMedia, caption: blockquotedMenu })
+     menuSent = true
+     console.log('[MENU] image (no quote) ok')
+   } catch (e) { console.log('[MENU] image (no quote) failed:', e.message) }
+ }
+ if (!menuSent) {
+   try {
+     await EliteProTech.sendMessage(m.chat, { text: blockquotedMenu })
+     console.log('[MENU] text fallback ok')
+   } catch (e) { console.log('[MENU] text fallback failed:', e.message) }
+ }
+ break
+ }
 } catch (err) {
 console.log(util.format(err))
 } 

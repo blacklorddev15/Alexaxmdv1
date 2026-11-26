@@ -62,6 +62,9 @@ const { ensureDir, formatUptime } = require('./helper/utils');
 const { logInfo, logSuccess, logWarn, logError, logSession } = require('./helper/logger');
 const S = require('./helper/session');
 
+// How long a single outgoing message may take before it is reported as stalled.
+const SEND_TIMEOUT_MS = Number(process.env.SEND_TIMEOUT_MS || 20000);
+
 // ─────────────────────────────────────────────────────────────
 //   POSTGRES AUTH STATE
 //   With DATABASE_URL set (Heroku Postgres), WhatsApp credentials are stored in the database, so a
@@ -598,11 +601,29 @@ async function startWhatsApp(sessionId, telegramChatId = null, pairPhone = null,
       }
       content = next;
     }
-    return _rawSend(jid, content, options).catch((err) => {
-      // Never fail silently: an undelivered reply is otherwise indistinguishable from a crash.
-      logError('SEND', `${jid} [${content && Object.keys(content).join('/')}]: ${err.message}`);
-      throw err;
+    // Every send is timed and logged. Without an "ok" line a successful send and a
+    // stalled one are indistinguishable in the logs, which is what made this bug
+    // impossible to close.
+    const kind = content && typeof content === 'object' ? Object.keys(content).join('/') : typeof content;
+    const t0 = Date.now();
+    const guard = new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        logError('SEND', `TIMEOUT ${jid} [${kind}] after ${SEND_TIMEOUT_MS}ms (no response from socket)`);
+        resolve({ __timeout: true });
+      }, SEND_TIMEOUT_MS);
+      if (timer.unref) timer.unref();
     });
+    const attempt = _rawSend(jid, content, options)
+      .then((res) => {
+        logSession(sessionId, `[SEND] ok ${jid} [${kind}] ${Date.now() - t0}ms id=${res?.key?.id || 'n/a'}`);
+        return res;
+      })
+      .catch((err) => {
+        // Never fail silently: an undelivered reply is otherwise indistinguishable from a crash.
+        logError('SEND', `${jid} [${kind}] ${Date.now() - t0}ms: ${err.message}`);
+        throw err;
+      });
+    return Promise.race([attempt, guard]);
   };
 
   sock.__sessionId = sessionId;
