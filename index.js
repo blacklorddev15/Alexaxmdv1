@@ -1621,8 +1621,9 @@ function startPingLoop() {
     const phone = sessionId.split('_').pop();
     const target = `${phone}@s.whatsapp.net`;
     const started = Date.now();
+    const body = req.body && typeof req.body.text === 'string' ? req.body.text : null;
     try {
-      const sent = await sock.sendMessage(target, { text: `Selftest ${new Date().toISOString()}` });
+      const sent = await sock.sendMessage(target, body ? { text: body, __plain: true } : { text: `Selftest ${new Date().toISOString()}` });
       res.json({ ok: true, target, ms: Date.now() - started, id: sent && sent.key && sent.key.id });
     } catch (err) {
       res.status(502).json({ ok: false, target, error: err.message });
