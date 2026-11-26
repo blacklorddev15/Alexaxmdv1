@@ -438,8 +438,12 @@ console.log('[PACK] dispatch: cmd=%j public=%s creator=%s fromMe=%s chat=%s text
 
     // Plain text first. This is the same call shape that the /api/selftest probe proved
     // works on this socket, so it cannot be masked by a malformed button payload.
-    // If buttons work too, WhatsApp replaces this with the interactive version below.
-    await EliteProTech.sendMessage(m.chat, { text: pongText }, { quoted: m }).catch(e => {
+    // The URL is on its own line: WhatsApp turns it into a tappable link in every chat,
+    // including the self-chat where native-flow buttons are never rendered.
+    // If the interactive payload below does render, it appears as a second message.
+    await EliteProTech.sendMessage(m.chat, {
+      text: `${pongText}\n\nWebsite: ${panelUrl}`,
+    }, { quoted: m }).catch(e => {
       console.log('[PING] text send failed:', e.message)
     })
 
