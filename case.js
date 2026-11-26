@@ -252,12 +252,14 @@ async function handleMessage(sock, m, chatMeta = {}) {
   // Sending to a bare LID is accepted but silently never delivered, so every target is resolved to
   // its phone number first: the key carries it in remoteJidAlt/participantAlt, and the signal
   // repository can map it when the key does not.
+  const stripDevice = (j) => String(j).replace(/:\d+@s\.whatsapp\.net$/, '@s.whatsapp.net');
+
   async function resolvePn(jidStr, alt) {
     if (!jidStr || !jidStr.endsWith('@lid')) return jidStr;
-    if (alt) return alt.includes('@') ? alt : `${alt}@s.whatsapp.net`;
+    if (alt) return stripDevice(alt.includes('@') ? alt : `${alt}@s.whatsapp.net`);
     try {
       const pn = await sock.signalRepository?.lidMapping?.getPNForLID?.(jidStr);
-      if (pn) return pn.includes('@') ? pn : `${pn}@s.whatsapp.net`;
+      if (pn) return stripDevice(pn.includes('@') ? pn : `${pn}@s.whatsapp.net`);
     } catch {}
     return jidStr;
   }
@@ -276,8 +278,12 @@ async function handleMessage(sock, m, chatMeta = {}) {
   }
   // The command pack sends to m.chat, not to the variable above, so the target has to be retargeted
   // too - otherwise every reply goes to the LID and is silently dropped.
+  if (rawFrom !== from) {
+    // The pack builds its own message object from m.key.remoteJid (helper/lib/myfunc.smsg), so the
+    // key has to carry the resolved JID - setting m.chat alone is overwritten.
+    m.key = { ...m.key, remoteJid: from };
+  }
   if (m.chat !== from) {
-    console.log(`[JID] chat retargeted ${m.chat} -> ${from}`);
     m.chat = from;
   }
   const senderNumber = sender.split('@')[0];
