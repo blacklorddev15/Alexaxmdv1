@@ -387,8 +387,48 @@ async function buildLiveStatus(EliteProTech) {
 
 console.log('[PACK] dispatch: cmd=%j public=%s creator=%s fromMe=%s chat=%s text=%j',
     command, EliteProTech.public, isCreator, m.key?.fromMe, m.chat, String(m.text || '').slice(0, 24))
-switch (command) {
-case 'ping': {
+ switch (command) {
+ case 'btntest': {
+    // One-shot diagnostic. WhatsApp accepts several different wrappers for a native-flow
+    // button message and silently discards the ones it dislikes (relayMessage reports no
+    // error either way), so every supported shape is sent once, labelled, to see which
+    // ones actually render. Delete this case once the winning shape is known.
+    const { generateWAMessageFromContent } = require('@whiskeysockets/baileys')
+    const btnPrefix = global.prefix !== undefined && global.prefix !== null ? global.prefix : '.'
+    const btnUrl = process.env.PANEL_URL || 'https://marcelo-ab3507490d43.herokuapp.com'
+    const btnButtons = [
+      { name: 'quick_reply', buttonParamsJson: JSON.stringify({ display_text: 'Ping', id: `${btnPrefix}ping` }) },
+      { name: 'cta_url', buttonParamsJson: JSON.stringify({ display_text: 'Website', url: btnUrl, merchant_url: btnUrl }) },
+    ]
+    const ctx = { deviceListMetadata: {}, deviceListMetadataVersion: 2 }
+    const flow = (label, extra = {}) => ({
+      body: { text: label },
+      footer: { text: 'ALEXA XMD' },
+      nativeFlowMessage: { buttons: btnButtons, messageParamsJson: '', ...extra },
+    })
+    const btnVariants = [
+      ['V1 bare', { interactiveMessage: flow('V1 bare interactiveMessage') }],
+      ['V2 v1wrap', { viewOnceMessage: { message: { messageContextInfo: ctx, interactiveMessage: flow('V2 viewOnceMessage') } } }],
+      ['V3 v2wrap', { viewOnceMessageV2: { message: { messageContextInfo: ctx, interactiveMessage: flow('V3 viewOnceMessageV2') } } }],
+      ['V4 v3ver', { viewOnceMessageV2: { message: { messageContextInfo: ctx, interactiveMessage: {
+        header: { title: 'ALEXA XMD', hasMediaAttachment: false },
+        ...flow('V4 viewOnceMessageV2 + messageVersion 3', { messageVersion: 3 }),
+      } } } }],
+    ]
+    for (const [tag, content] of btnVariants) {
+      try {
+        const built = generateWAMessageFromContent(m.chat, content, { userJid: EliteProTech.user.id })
+        await EliteProTech.relayMessage(m.chat, built.message, { messageId: built.key.id })
+        console.log('[BTN]', tag, 'relayed', built.key.id)
+      } catch (btnErr) {
+        console.log('[BTN]', tag, 'FAILED:', btnErr.message)
+      }
+      await new Promise(r => setTimeout(r, 1500))
+    }
+    await EliteProTech.sendMessage(m.chat, { text: 'Button test sent: V1 V2 V3 V4. Which ones show buttons?' }, {})
+  }
+ break
+ case 'ping': {
     const start = performance.now()
     await EliteProTech.sendMessage(m.chat, { react: { text: "⚙️", key: m.key } }).catch(() => {})
     const latency = Math.max(0, performance.now() - start)
