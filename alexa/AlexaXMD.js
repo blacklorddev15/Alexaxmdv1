@@ -447,13 +447,21 @@ console.log('[PACK] dispatch: cmd=%j public=%s creator=%s fromMe=%s chat=%s text
     // arrives with no buttons. Sending a native interactive message is the supported path.
     try {
       const { generateWAMessageFromContent } = require('@whiskeysockets/baileys')
+      // Full native-flow shape: viewOnceMessageV2 wrapper (the current one, not the legacy
+      // viewOnceMessage), an explicit header with hasMediaAttachment:false, and
+      // messageVersion 3. relayMessage reports success for every wrapper it is handed,
+      // including ones WhatsApp silently discards, so the complete shape is the only
+      // defensible choice rather than a minimal one.
+      // The quote is deliberately omitted: quoted context pointing at a LID-addressed
+      // message while targeting a PN JID is a known way to get the payload dropped.
       const interactive = generateWAMessageFromContent(m.chat, {
-        viewOnceMessage: {
+        viewOnceMessageV2: {
           message: {
             messageContextInfo: { deviceListMetadata: {}, deviceListMetadataVersion: 2 },
             interactiveMessage: {
+              header: { title: '𝗔𝗟𝗘𝗫𝗔 𝗫𝗠𝗗', hasMediaAttachment: false },
               body: { text: pongText },
-              footer: { text: '𝗔𝗟𝗘𝗫𝗔 𝗫𝗠𝗗' },
+              footer: { text: panelUrl },
               nativeFlowMessage: {
                 buttons: [
                   {
@@ -470,13 +478,15 @@ console.log('[PACK] dispatch: cmd=%j public=%s creator=%s fromMe=%s chat=%s text
                   },
                 ],
                 messageParamsJson: '',
+                messageVersion: 3,
               },
             },
           },
         },
-      }, { userJid: EliteProTech.user.id, quoted: m })
+      }, { userJid: EliteProTech.user.id })
 
       await EliteProTech.relayMessage(m.chat, interactive.message, { messageId: interactive.key.id })
+      console.log('[PING] buttons relayed', interactive.key.id)
     } catch (buttonErr) {
       console.log('Ping buttons failed:', buttonErr.message)
       await EliteProTech.sendMessage(m.chat, {
