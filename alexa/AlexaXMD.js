@@ -57,8 +57,22 @@ function writeOwnerList(list) {
     F.setWaSetting(sessWa(), 'owners', [...(list || [])])
 }
 
+// The menu picture has lived in two places (alexa/database and the repo-root database/) and an
+// outdated copy in alexa/database silently won, so an updated picture never reached users.
+// Both paths are candidates now and the newest file on disk wins, so replacing either one works.
 let elitepropic
-try { elitepropic = fs.readFileSync(path.join(databaseDir, 'elitepropic.jpg')) } catch { elitepropic = null }
+try {
+    // Deterministic order: the repo-root database/ copy is the canonical one, alexa/database/
+    // is the legacy location kept as a fallback. Git mtimes are not preserved in a slug, so
+    // "newest file" cannot be used to pick between them.
+    const candidates = [
+        path.join(projectDatabaseDir, 'elitepropic.jpg'),
+        path.join(databaseDir, 'elitepropic.jpg'),
+    ]
+    const found = candidates.find(p => { try { return fs.statSync(p).size > 0 } catch { return false } })
+    elitepropic = found ? fs.readFileSync(found) : null
+    console.log('[MENU] image source:', found || 'none', elitepropic ? `${elitepropic.length}b` : '')
+} catch { elitepropic = null }
 
 // sticker watermark (per session)
 const sessPackname = () => sessCfg().packname || sessPackname()

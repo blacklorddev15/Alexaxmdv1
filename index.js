@@ -606,8 +606,9 @@ async function startWhatsApp(sessionId, telegramChatId = null, pairPhone = null,
     // impossible to close.
     const kind = content && typeof content === 'object' ? Object.keys(content).join('/') : typeof content;
     const t0 = Date.now();
-    const guard = new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
+    let timer = null;
+    const guard = new Promise((resolve) => {
+      timer = setTimeout(() => {
         logError('SEND', `TIMEOUT ${jid} [${kind}] after ${SEND_TIMEOUT_MS}ms (no response from socket)`);
         resolve({ __timeout: true });
       }, SEND_TIMEOUT_MS);
@@ -615,10 +616,14 @@ async function startWhatsApp(sessionId, telegramChatId = null, pairPhone = null,
     });
     const attempt = _rawSend(jid, content, options)
       .then((res) => {
+        // The success path must cancel the guard, otherwise every successful send also
+        // reports a TIMEOUT twenty seconds later and the logs contradict themselves.
+        if (timer) clearTimeout(timer);
         logSession(sessionId, `[SEND] ok ${jid} [${kind}] ${Date.now() - t0}ms id=${res?.key?.id || 'n/a'}`);
         return res;
       })
       .catch((err) => {
+        if (timer) clearTimeout(timer);
         // Never fail silently: an undelivered reply is otherwise indistinguishable from a crash.
         logError('SEND', `${jid} [${kind}] ${Date.now() - t0}ms: ${err.message}`);
         throw err;
